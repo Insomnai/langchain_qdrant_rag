@@ -1,138 +1,231 @@
-# LangChain RAG Framework z Qdrant
+# Full-Stack RAG Application - Monorepo
 
-## Przegląd projektu
+## Przegląd Projektu
 
-Framework RAG (Retrieval-Augmented Generation) zbudowany z wykorzystaniem LangChain i bazy wektorowej Qdrant. Umożliwia tworzenie inteligentnych systemów, które mogą odpowiadać na pytania wykorzystując kontekst z własnej bazy wiedzy.
+Full-stack aplikacja RAG (Retrieval-Augmented Generation) zbudowana jako monorepo z:
+- **Frontend**: React + Vite + Tailwind + shadcn/ui (sklonowany z Lovable)
+- **Backend**: Node.js + Express + LangChain + Qdrant
+- **Shared**: TypeScript types dla type-safety
 
-## Ostatnie zmiany
+## Ostatnie Zmiany
 
 **28 października 2025**
-- Utworzono kompletną strukturę projektu dla RAG
-- Zaimplementowano integrację LangChain z Qdrant
-- Dodano system zarządzania konfiguracją przez plik .env
-- Utworzono moduły: embeddings, vector store, retriever, chain
-- Dodano narzędzia do ładowania i dzielenia dokumentów
-- Utworzono przykładową aplikację demonstracyjną
+- Przekształcono projekt w monorepo structure
+- Zintegr owano frontend z GitHub (Lovable) z backendem RAG
+- Utworzono Express.js API dla operacji RAG
+- Skonfigurowano Vite proxy dla komunikacji frontend ↔ backend
+- Dodano shared TypeScript types
+- Skonfigurowano npm workspaces
+- Dodano concurrently dla równoczesnego uruchamiania apps
 
-## Struktura projektu
+## Architektura Monorepo
 
 ```
-├── src/
-│   ├── config/
-│   │   └── env.js              # Konfiguracja środowiska (.env)
-│   ├── rag/
-│   │   ├── embeddings.js       # Konfiguracja OpenAI embeddings
-│   │   ├── vectorStore.js      # Integracja z Qdrant
-│   │   ├── retriever.js        # Retriever dla RAG
-│   │   └── chain.js            # RAG chain
-│   └── utils/
-│       └── documentLoader.js   # Narzędzia do dokumentów
-├── examples/
-│   └── basicRAG.js             # Przykład użycia
-├── index.js                    # Główny punkt wejścia
-├── .env.example                # Przykładowa konfiguracja
-└── package.json
+rag-fullstack-monorepo/
+├── apps/
+│   ├── frontend/              # React frontend (port 5000)
+│   │   ├── src/
+│   │   ├── public/
+│   │   ├── vite.config.ts     # Proxy /api -> backend
+│   │   └── package.json
+│   └── backend/               # Express API (port 3000)
+│       ├── src/
+│       │   ├── config/        # Konfiguracja .env
+│       │   ├── rag/           # LangChain + Qdrant
+│       │   └── utils/
+│       ├── server.js          # Express API server
+│       └── package.json
+├── packages/
+│   └── shared/                # Wspólne typy
+│       ├── types/
+│       │   └── api.ts         # TypeScript interfaces
+│       └── index.ts
+├── .env                       # Konfiguracja (root)
+├── .gitignore                 # Ignores node_modules, .env
+├── package.json               # Root workspace config
+└── README.md
+```
+
+## Workflow
+
+### Replit Workflow: "Full-Stack App"
+- **Command**: `npm run dev`
+- **Port**: 5000 (frontend)
+- **Output**: Webview
+- Uruchamia równocześnie frontend i backend
+
+### Scripts
+
+```json
+{
+  "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+  "dev:frontend": "npm run dev --workspace=apps/frontend",
+  "dev:backend": "npm run dev --workspace=apps/backend",
+  "build": "npm run build --workspaces"
+}
 ```
 
 ## Konfiguracja
 
-### Wymagane klucze API
+### Plik .env (root projektu)
 
-Zarządzanie kluczami API odbywa się przez plik `.env`:
-
-1. Skopiuj plik `.env.example` do `.env`
-2. Uzupełnij wymagane klucze:
-   - `OPENAI_API_KEY` - klucz API OpenAI
-   - `QDRANT_URL` - URL instancji Qdrant
-   - `QDRANT_API_KEY` - klucz API Qdrant (opcjonalny dla lokalnej instancji)
-   - `QDRANT_COLLECTION_NAME` - nazwa kolekcji
-
-### Uruchomienie lokalnej instancji Qdrant
-
-```bash
-docker run -p 6333:6333 qdrant/qdrant
+```env
+OPENAI_API_KEY=your_key_here
+QDRANT_URL=http://localhost:6333
+QDRANT_API_KEY=
+QDRANT_COLLECTION_NAME=langchain_rag_collection
 ```
 
-## Architektura
+Backend automatycznie czyta `.env` z głównego katalogu projektu.
 
-### Komponenty główne
+## API Endpoints (Backend)
 
-1. **Embeddings** (`src/rag/embeddings.js`)
-   - Konfiguracja OpenAI embeddings
-   - Model: `text-embedding-3-small`
+### `/api/health` - GET
+Sprawdzenie statusu backendu i połączenia z Qdrant
 
-2. **Vector Store** (`src/rag/vectorStore.js`)
-   - Integracja z Qdrant
-   - Tworzenie i zarządzanie kolekcjami
-   - Dodawanie dokumentów
-
-3. **Retriever** (`src/rag/retriever.js`)
-   - Wyszukiwanie semantyczne
-   - Konfigurowalna liczba wyników (k)
-   - Wsparcie dla filtrów
-
-4. **RAG Chain** (`src/rag/chain.js`)
-   - Łańcuch RAG z LangChain
-   - Integracja z ChatOpenAI
-   - Wsparcie dla źródeł odpowiedzi
-
-5. **Document Loader** (`src/utils/documentLoader.js`)
-   - Tworzenie dokumentów z tekstu
-   - Dzielenie dokumentów na fragmenty
-   - RecursiveCharacterTextSplitter
-
-## Użycie
-
-### Podstawowy przykład
-
-```javascript
-import { validateConfig } from './src/config/env.js';
-import { createVectorStoreFromDocuments } from './src/rag/vectorStore.js';
-import { createRAGChain } from './src/rag/chain.js';
-import { createDocumentsFromText } from './src/utils/documentLoader.js';
-
-// Sprawdzenie konfiguracji
-if (!validateConfig()) {
-  process.exit(1);
+### `/api/documents/add` - POST
+Dodawanie dokumentów do bazy wektorowej
+```json
+{
+  "content": "tekst dokumentu",
+  "metadata": { "source": "example" }
 }
-
-// Tworzenie dokumentów
-const documents = createDocumentsFromText([
-  'Tekst dokumentu 1',
-  'Tekst dokumentu 2',
-]);
-
-// Tworzenie bazy wektorowej
-const vectorStore = await createVectorStoreFromDocuments(documents);
-
-// Tworzenie RAG chain
-const chain = await createRAGChain(vectorStore);
-
-// Zadawanie pytania
-const answer = await chain.invoke({ question: 'Twoje pytanie?' });
-console.log(answer);
 ```
 
-### Uruchomienie przykładu
-
-```bash
-npm run example
+### `/api/chat` - POST
+Zadawanie pytań do RAG system
+```json
+{
+  "question": "twoje pytanie",
+  "k": 3
+}
 ```
 
-## Preferencje użytkownika
+## Frontend ↔ Backend Communication
 
-- **Zarządzanie kluczami API**: Wyłącznie przez plik `.env`, bez Replit Secrets
-- **Język**: Polski (komunikaty, komentarze, dokumentacja)
+### Vite Proxy Configuration
+```typescript
+// apps/frontend/vite.config.ts
+server: {
+  host: "0.0.0.0",
+  port: 5000,
+  proxy: {
+    '/api': {
+      target: 'http://localhost:3000',
+      changeOrigin: true,
+    },
+  },
+}
+```
+
+Frontend może wykonywać requests do `/api/*` i zostaną automatycznie przekierowane do backendu.
+
+## Shared Types
+
+Wspólne typy TypeScript w `packages/shared/types/api.ts`:
+
+```typescript
+export interface Document { ... }
+export interface AddDocumentRequest { ... }
+export interface ChatRequest { ... }
+export interface ChatResponse { ... }
+export interface HealthResponse { ... }
+```
+
+Używane zarówno przez frontend (dla HTTP requests) jak i backend (dla API responses).
 
 ## Technologie
 
-- **LangChain**: Framework do aplikacji LLM
-- **Qdrant**: Baza wektorowa
-- **OpenAI**: Embeddings i LLM
-- **Node.js**: Runtime JavaScript
+### Frontend
+- React 18
+- TypeScript
+- Vite (build tool)
+- Tailwind CSS
+- shadcn/ui components
+- React Router
+
+### Backend
+- Node.js (ES Modules)
+- Express.js
+- LangChain
+- OpenAI (embeddings + LLM)
+- Qdrant (vector database)
+- dotenv (env management)
+
+### DevOps
+- npm workspaces
+- concurrently (parallel execution)
+- Replit deployment
+
+## Development Flow
+
+1. **Start development**: `npm run dev`
+2. **Frontend** (localhost:5000) - interfejs użytkownika
+3. **Backend** (localhost:3000) - API endpoints
+4. Frontend proxy `/api/*` → Backend
+
+## Deployment
+
+### Replit
+- Frontend automatycznie dostępny przez webview (port 5000)
+- Backend działa w tle (port 3000)
+- Jeden workflow uruchamia obie aplikacje
+
+### Production Considerations
+- Frontend można zbudować: `npm run build:frontend`
+- Backend może serwować zbudowany frontend jako static files
+- Alternatywnie: osobne deploymenty (Netlify/Vercel + Railway/Fly.io)
+
+## Preferencje Użytkownika
+
+- **Język**: Polski (komunikaty, komentarze, dokumentacja)
+- **Zarządzanie kluczami**: Plik `.env` (nie Replit Secrets)
+- **Frontend source**: GitHub (Lovable)
+- **Struktura**: Monorepo (apps/, packages/)
 
 ## Bezpieczeństwo
 
-- Plik `.env` jest w `.gitignore` (klucze API nie są commitowane)
-- Walidacja konfiguracji przed uruchomieniem
-- Jasne komunikaty błędów dotyczące brakujących kluczy
+- `.env` w `.gitignore`
+- Klucze API nie są commitowane
+- CORS enabled dla development
+- Walidacja input w API endpoints
+
+## Git Setup
+
+Frontend został sklonowany z:
+```
+https://github.com/Insomnai/rag-sample-49668
+```
+
+**Uwaga**: Folder `apps/frontend/.git` powinien być usunięty lub zignorowany aby uniknąć konfliktów z głównym repo.
+
+## Troubleshooting
+
+### "RAG system not initialized"
+- Uzupełnij `OPENAI_API_KEY` w `.env`
+- Upewnij się że Qdrant jest dostępny
+
+### Frontend nie widzi backendu
+- Sprawdź czy backend działa (port 3000)
+- Zweryfikuj Vite proxy config
+
+### Port conflicts
+- Frontend MUSI być na porcie 5000 (Replit webview requirement)
+- Backend na porcie 3000 (konfigurowalny przez PORT env var)
+
+## Next Steps / TODOs
+
+1. Połączyć frontend UI z backend API (fetch calls)
+2. Dodać UI dla dodawania dokumentów
+3. Dodać chat interface
+4. Rozważyć dodanie authentication
+5. Setup production build workflow
+6. Dodać error handling w frontend
+7. Rozważyć WebSocket dla streaming responses
+
+## Resources
+
+- Frontend (Lovable): https://lovable.dev/projects/60862761-6587-4de9-b13e-9bc11e226285
+- GitHub: https://github.com/Insomnai/rag-sample-49668
+- LangChain Docs: https://js.langchain.com/
+- Qdrant Docs: https://qdrant.tech/documentation/

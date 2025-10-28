@@ -1,32 +1,26 @@
 {
-  "name": "langchain-rag-qdrant",
+  "name": "rag-fullstack-monorepo",
   "version": "1.0.0",
-  "description": "LangChain RAG Framework z bazą wektorową Qdrant",
-  "main": "index.js",
-  "type": "module",
-  "scripts": {
-    "start": "node index.js",
-    "example": "node examples/basicRAG.js"
-  },
-  "keywords": [
-    "langchain",
-    "qdrant",
-    "rag",
-    "vector-database",
-    "ai",
-    "llm"
+  "description": "Full-stack RAG application with React frontend and LangChain backend",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
   ],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@langchain/community": "^1.0.0",
-    "@langchain/core": "^1.0.2",
-    "@langchain/openai": "^0.3.16",
-    "@langchain/qdrant": "^1.0.0",
-    "@qdrant/js-client-rest": "^1.12.0",
-    "@types/node": "^22.13.11",
-    "dotenv": "^16.4.7",
-    "langchain": "^0.3.36",
-    "uuid": "^11.0.5"
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "build": "npm run build --workspaces",
+    "build:frontend": "npm run build --workspace=apps/frontend",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "start": "npm run start --workspace=apps/backend",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

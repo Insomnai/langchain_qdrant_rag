@@ -1,233 +1,244 @@
-# 🦜 LangChain RAG Framework z Qdrant
+# 🚀 Full-Stack RAG Application
 
-Framework do tworzenia aplikacji RAG (Retrieval-Augmented Generation) z wykorzystaniem LangChain i bazy wektorowej Qdrant.
+Aplikacja RAG (Retrieval-Augmented Generation) z frontendem React i backendem LangChain + Qdrant.
 
-## 🚀 Szybki start
+## 📦 Struktura Projektu
 
-### 1. Konfiguracja
-
-Skopiuj przykładowy plik konfiguracyjny:
-
-```bash
-cp .env.example .env
+```
+├── apps/
+│   ├── frontend/           # React + Vite + Tailwind + shadcn/ui
+│   └── backend/            # Node.js + Express + LangChain + Qdrant
+├── packages/
+│   └── shared/             # Wspólne typy TypeScript
+├── package.json            # Root workspace
+└── .env                    # Konfiguracja (klucze API)
 ```
 
-Edytuj plik `.env` i uzupełnij wymagane klucze API:
+## 🚀 Szybki Start
+
+### 1. Konfiguracja Środowiska
+
+Uzupełnij plik `.env` w głównym katalogu:
 
 ```env
-OPENAI_API_KEY=twój_klucz_api_openai
+OPENAI_API_KEY=twój_klucz_openai_tutaj
 
 QDRANT_URL=http://localhost:6333
-QDRANT_API_KEY=twój_klucz_api_qdrant
+QDRANT_API_KEY=twój_klucz_qdrant_tutaj
 
 QDRANT_COLLECTION_NAME=langchain_rag_collection
 ```
 
-### 2. Uruchomienie lokalnej instancji Qdrant (opcjonalnie)
+### 2. Instalacja Zależności
 
-Jeśli nie masz dostępu do Qdrant Cloud, uruchom lokalną instancję:
+```bash
+npm install
+```
+
+### 3. Uruchomienie Aplikacji
+
+```bash
+npm run dev
+```
+
+To uruchomi:
+- **Frontend** na `http://localhost:5000`
+- **Backend API** na `http://localhost:3000`
+
+### Alternatywnie - Osobno
+
+```bash
+# Tylko frontend
+npm run dev:frontend
+
+# Tylko backend
+npm run dev:backend
+```
+
+## 🔧 API Endpointy
+
+Backend udostępnia następujące endpointy:
+
+### Health Check
+```bash
+GET http://localhost:3000/api/health
+```
+
+Odpowiedź:
+```json
+{
+  "status": "ok",
+  "backend": true,
+  "qdrant": true,
+  "message": "All systems operational"
+}
+```
+
+### Dodawanie Dokumentów
+```bash
+POST http://localhost:3000/api/documents/add
+Content-Type: application/json
+
+{
+  "content": "Twój tekst dokumentu tutaj",
+  "metadata": {
+    "source": "example",
+    "category": "info"
+  }
+}
+```
+
+Odpowiedź:
+```json
+{
+  "success": true,
+  "documentId": "uuid-here",
+  "message": "Document added successfully (split into 3 chunks)"
+}
+```
+
+### Chat z RAG
+```bash
+POST http://localhost:3000/api/chat
+Content-Type: application/json
+
+{
+  "question": "Twoje pytanie tutaj",
+  "k": 3
+}
+```
+
+Odpowiedź:
+```json
+{
+  "answer": "Odpowiedź wygenerowana przez AI na podstawie dokumentów",
+  "sources": [
+    {
+      "content": "Fragment dokumentu użyty jako kontekst",
+      "metadata": { "source": "example" }
+    }
+  ]
+}
+```
+
+## 🛠️ Dostępne Komendy
+
+| Komenda | Opis |
+|---------|------|
+| `npm run dev` | Uruchamia frontend i backend równolegle |
+| `npm run dev:frontend` | Tylko frontend (port 5000) |
+| `npm run dev:backend` | Tylko backend (port 3000) |
+| `npm run build` | Buduje obie aplikacje |
+| `npm start` | Uruchamia backend w trybie produkcyjnym |
+
+## 🏗️ Architektura
+
+### Frontend (apps/frontend)
+- **Framework**: React 18 + TypeScript
+- **Build Tool**: Vite
+- **UI**: Tailwind CSS + shadcn/ui
+- **Routing**: React Router
+- **Port**: 5000
+
+Frontend automatycznie proxy'uje wszystkie requesty `/api/*` do backendu.
+
+### Backend (apps/backend)
+- **Runtime**: Node.js (ES Modules)
+- **Framework**: Express.js
+- **AI**: LangChain + OpenAI
+- **Vector DB**: Qdrant
+- **Port**: 3000
+
+Backend serwuje REST API dla operacji RAG.
+
+### Shared (packages/shared)
+- **TypeScript types** współdzielone między frontendem a backendem
+- Zapewnia type-safety dla komunikacji API
+
+## 🔑 Zmienne Środowiskowe
+
+| Zmienna | Wymagana | Opis | Domyślna wartość |
+|---------|----------|------|------------------|
+| `OPENAI_API_KEY` | ✅ Tak | Klucz API OpenAI | - |
+| `QDRANT_URL` | ❌ Nie | URL instancji Qdrant | `http://localhost:6333` |
+| `QDRANT_API_KEY` | ❌ Nie* | Klucz API Qdrant Cloud | - |
+| `QDRANT_COLLECTION_NAME` | ❌ Nie | Nazwa kolekcji | `langchain_rag_collection` |
+
+\* Wymagany tylko dla Qdrant Cloud
+
+## 🐳 Uruchomienie Qdrant (Opcjonalnie)
+
+Jeśli nie używasz Qdrant Cloud, uruchom lokalnie:
 
 ```bash
 docker run -p 6333:6333 qdrant/qdrant
 ```
 
-### 3. Testowanie
+## 📚 Przykładowe Użycie
 
-Uruchom przykładową aplikację:
-
-```bash
-npm run example
-```
-
-Lub uruchom główny plik:
+### 1. Dodaj dokument przez API
 
 ```bash
-npm start
+curl -X POST http://localhost:3000/api/documents/add \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "LangChain to framework do budowania aplikacji AI. Qdrant to baza wektorowa.",
+    "metadata": {"source": "tutorial"}
+  }'
 ```
 
-## 📁 Struktura projektu
+### 2. Zapytaj RAG
 
-```
-├── src/
-│   ├── config/
-│   │   └── env.js              # Zarządzanie konfiguracją przez .env
-│   ├── rag/
-│   │   ├── embeddings.js       # Konfiguracja OpenAI embeddings
-│   │   ├── vectorStore.js      # Integracja z Qdrant
-│   │   ├── retriever.js        # Retriever do wyszukiwania
-│   │   └── chain.js            # RAG Chain (łańcuch RAG)
-│   └── utils/
-│       └── documentLoader.js   # Narzędzia do pracy z dokumentami
-├── examples/
-│   └── basicRAG.js             # Przykład użycia
-├── index.js                    # Główny punkt wejścia
-├── .env.example                # Przykładowa konfiguracja
-└── README.md
+```bash
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Co to jest LangChain?"
+  }'
 ```
 
-## 💡 Przykłady użycia
+## 🧪 Development
 
-### Podstawowy RAG
+### Dodawanie nowych features
 
-```javascript
-import { validateConfig } from './src/config/env.js';
-import { createVectorStoreFromDocuments } from './src/rag/vectorStore.js';
-import { createRAGChain } from './src/rag/chain.js';
-import { createDocumentsFromText, splitDocuments } from './src/utils/documentLoader.js';
+1. **Frontend**: Edytuj pliki w `apps/frontend/src`
+2. **Backend**: Edytuj pliki w `apps/backend/src`
+3. **Shared Types**: Dodaj do `packages/shared/types`
 
-// Walidacja konfiguracji
-if (!validateConfig()) {
-  process.exit(1);
-}
+### Hot Reload
 
-// Tworzenie dokumentów
-const documents = createDocumentsFromText([
-  'LangChain to framework do tworzenia aplikacji AI.',
-  'Qdrant to baza wektorowa open-source.',
-  'RAG łączy wyszukiwanie z generowaniem tekstu.',
-]);
+Obie aplikacje mają włączony hot reload:
+- Frontend: Vite HMR
+- Backend: Restart przy zmianach (możesz dodać nodemon)
 
-// Dzielenie dokumentów na mniejsze fragmenty
-const splitDocs = await splitDocuments(documents, {
-  chunkSize: 500,
-  chunkOverlap: 50,
-});
+## 🔒 Bezpieczeństwo
 
-// Tworzenie bazy wektorowej
-const vectorStore = await createVectorStoreFromDocuments(splitDocs);
+- Plik `.env` jest w `.gitignore` - nie commituj kluczy API
+- CORS włączony w backendzie
+- API keys zarządzane przez plik `.env`
 
-// Tworzenie RAG chain
-const chain = await createRAGChain(vectorStore, {
-  modelName: 'gpt-3.5-turbo',
-  temperature: 0.3,
-  k: 3,
-});
+## 📖 Dokumentacja
 
-// Zadawanie pytania
-const answer = await chain.invoke({ question: 'Co to jest LangChain?' });
-console.log(answer);
-```
+- **LangChain**: https://js.langchain.com/
+- **Qdrant**: https://qdrant.tech/documentation/
+- **Vite**: https://vitejs.dev/
+- **shadcn/ui**: https://ui.shadcn.com/
 
-### RAG ze źródłami
+## 🆘 Troubleshooting
 
-```javascript
-import { createRAGChainWithSources } from './src/rag/chain.js';
+### Backend nie startuje
+- Sprawdź czy `.env` istnieje w głównym katalogu
+- Zweryfikuj klucze API w `.env`
+- Upewnij się, że Qdrant jest dostępny
 
-const chainWithSources = await createRAGChainWithSources(vectorStore, {
-  modelName: 'gpt-3.5-turbo',
-  k: 2,
-});
+### Frontend nie łączy się z backendem
+- Sprawdź czy backend działa na porcie 3000
+- Zweryfikuj konfigurację proxy w `apps/frontend/vite.config.ts`
 
-const result = await chainWithSources.invoke('Co to jest RAG?');
+### "RAG system not initialized"
+- Dodaj `OPENAI_API_KEY` do `.env`
+- Upewnij się, że Qdrant jest dostępny
 
-console.log('Odpowiedź:', result.answer);
-console.log('\nŹródła:');
-result.sources.forEach((doc, i) => {
-  console.log(`${i + 1}. ${doc.pageContent}`);
-  console.log(`   Metadata:`, doc.metadata);
-});
-```
-
-### Dodawanie dokumentów do istniejącej bazy
-
-```javascript
-import { createVectorStore, addDocumentsToVectorStore } from './src/rag/vectorStore.js';
-
-// Połączenie z istniejącą kolekcją
-const vectorStore = await createVectorStore();
-
-// Nowe dokumenty
-const newDocs = createDocumentsFromText([
-  'Nowy dokument 1',
-  'Nowy dokument 2',
-]);
-
-// Dodanie do bazy
-await addDocumentsToVectorStore(vectorStore, newDocs);
-```
-
-### Własny prompt
-
-```javascript
-const customPrompt = `Jesteś ekspertem AI. Odpowiedz na pytanie używając kontekstu.
-Jeśli nie wiesz odpowiedzi, powiedz to wprost.
-
-Kontekst:
-{context}
-
-Pytanie: {question}
-
-Szczegółowa odpowiedź:`;
-
-const chain = await createRAGChain(vectorStore, {
-  modelName: 'gpt-4',
-  temperature: 0.5,
-  promptTemplate: customPrompt,
-});
-```
-
-## 🔧 Dostępne funkcje
-
-### Vector Store
-
-- `createVectorStore()` - połączenie z istniejącą kolekcją Qdrant
-- `createVectorStoreFromDocuments(documents)` - utworzenie nowej kolekcji z dokumentów
-- `addDocumentsToVectorStore(vectorStore, documents)` - dodanie dokumentów do istniejącej bazy
-
-### RAG Chain
-
-- `createRAGChain(vectorStore, options)` - utworzenie łańcucha RAG
-- `createRAGChainWithSources(vectorStore, options)` - RAG z informacją o źródłach
-
-### Document Loader
-
-- `createDocumentsFromText(texts, metadatas)` - utworzenie dokumentów z tekstów
-- `splitDocuments(documents, options)` - podział dokumentów na fragmenty
-- `loadAndSplitText(text, metadata, options)` - załadowanie i podział pojedynczego tekstu
-
-## 🔑 Zmienne środowiskowe
-
-| Zmienna | Opis | Wymagana | Domyślna wartość |
-|---------|------|----------|------------------|
-| `OPENAI_API_KEY` | Klucz API OpenAI | ✅ Tak | - |
-| `QDRANT_URL` | URL instancji Qdrant | ❌ Nie | `http://localhost:6333` |
-| `QDRANT_API_KEY` | Klucz API Qdrant | ❌ Nie* | - |
-| `QDRANT_COLLECTION_NAME` | Nazwa kolekcji | ❌ Nie | `langchain_rag_collection` |
-
-\* Wymagany tylko dla Qdrant Cloud
-
-## 📦 Zależności
-
-- `langchain` - główny framework LangChain
-- `@langchain/openai` - integracja z OpenAI
-- `@langchain/qdrant` - integracja z Qdrant
-- `@langchain/core` - podstawowe typy LangChain
-- `@langchain/community` - dodatkowe komponenty
-- `@qdrant/js-client-rest` - klient Qdrant
-- `dotenv` - zarządzanie zmiennymi środowiskowymi
-- `uuid` - generowanie unikalnych identyfikatorów
-
-## 🛡️ Bezpieczeństwo
-
-- Plik `.env` jest w `.gitignore` - klucze API nie są commitowane
-- Walidacja konfiguracji przed uruchomieniem aplikacji
-- Jasne komunikaty błędów o brakujących kluczach
-
-## 📚 Dokumentacja
-
-- [LangChain JS Documentation](https://js.langchain.com/)
-- [Qdrant Documentation](https://qdrant.tech/documentation/)
-- [OpenAI API Documentation](https://platform.openai.com/docs/)
-
-## 🤝 Wkład
-
-Framework jest gotowy do rozbudowy. Możesz dodać:
-- Własne loadery dokumentów (PDF, CSV, etc.)
-- Różne strategie dzielenia dokumentów
-- Własne modele embeddings
-- Dodatkowe metody wyszukiwania
-- Customowe chain'y RAG
-
-## 📄 Licencja
+## 📝 Licencja
 
 ISC

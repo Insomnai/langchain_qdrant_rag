@@ -1,0 +1,35 @@
+{
+  "name": "langchain-rag-qdrant",
+  "version": "1.0.0",
+  "description": "LangChain RAG Framework z bazą wektorową Qdrant",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "example": "node examples/basicRAG.js"
+  },
+  "keywords": [
+    "langchain",
+    "qdrant",
+    "rag",
+    "vector-database",
+    "ai",
+    "llm"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@langchain/community": "^1.0.0",
+    "@langchain/core": "^1.0.2",
+    "@langchain/openai": "^0.3.16",
+    "@langchain/qdrant": "^1.0.0",
+    "@qdrant/js-client-rest": "^1.12.0",
+    "@types/node": "^22.13.11",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "langchain": "^0.3.36",
+    "uuid": "^11.0.5"
+  }
+}

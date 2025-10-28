@@ -1,0 +1,12 @@
+{
+  "name": "@monorepo/shared",
+  "version": "1.0.0",
+  "description": "Shared types and utilities for RAG monorepo",
+  "main": "index.ts",
+  "types": "index.ts",
+  "private": true,
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
