@@ -9,6 +9,7 @@ import {
 } from './src/rag/vectorStore.js';
 import { createRAGChainWithSources } from './src/rag/chain.js';
 import { createDocumentsFromText, splitDocuments } from './src/utils/documentLoader.js';
+import { testDatabaseConnection, getPool } from './src/config/database.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,17 +50,35 @@ async function initializeRAG() {
 app.get('/api/health', async (req, res) => {
   try {
     const qdrantConnected = vectorStore !== null;
+    let databaseConnected = false;
+    
+    try {
+      const pool = getPool();
+      const result = await pool.query('SELECT 1');
+      databaseConnected = result.rowCount === 1;
+    } catch (dbError) {
+      console.warn('Database health check failed:', dbError.message);
+    }
+    
     res.json({
       status: 'ok',
       backend: true,
       qdrant: qdrantConnected,
-      message: qdrantConnected ? 'All systems operational' : 'Qdrant not initialized - add documents first',
+      database: databaseConnected,
+      message: qdrantConnected && databaseConnected 
+        ? 'All systems operational' 
+        : !qdrantConnected && !databaseConnected
+        ? 'Qdrant and Database not connected'
+        : !qdrantConnected
+        ? 'Qdrant not initialized - add documents first'
+        : 'Database not connected - check .env configuration',
     });
   } catch (error) {
     res.status(500).json({
       status: 'error',
       backend: true,
       qdrant: false,
+      database: false,
       message: error.message,
     });
   }
@@ -157,11 +176,13 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`\n🚀 RAG API Server running on port ${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
   console.log(`💬 Chat endpoint: POST http://localhost:${PORT}/api/chat`);
   console.log(`📄 Add documents: POST http://localhost:${PORT}/api/documents/add\n`);
+  
+  await testDatabaseConnection();
   
   initializeRAG().then((initialized) => {
     if (initialized) {
