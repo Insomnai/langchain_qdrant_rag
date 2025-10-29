@@ -4,11 +4,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Send, Bot, User, FileText } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+export type Source = {
+  content: string;
+  metadata: Record<string, any>;
+};
+
 export type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: string[];
+  sources?: Source[];
   chatId: string;
 };
 
@@ -82,14 +87,21 @@ const ChatMessages = ({
                 </div>
                 {message.sources && message.sources.length > 0 && (
                   <div className="inline-block space-y-1 text-sm">
-                    <p className="text-muted-foreground font-medium">Źródła:</p>
+                    <p className="text-muted-foreground font-medium">Źródła ({message.sources.length}):</p>
                     {message.sources.map((source, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                        className="flex items-start gap-2 p-2 bg-background rounded text-xs"
                       >
-                        <FileText className="w-3 h-3" />
-                        <span>{source}</span>
+                        <FileText className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground mb-1">
+                            {source.metadata?.source || `Dokument ${idx + 1}`}
+                          </p>
+                          <p className="text-muted-foreground line-clamp-2">
+                            {source.content.substring(0, 100)}...
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>

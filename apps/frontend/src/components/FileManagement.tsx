@@ -2,24 +2,17 @@ import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, File, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { UploadedFile } from "./ChatSidebar";
+import type { AddDocumentRequest, AddDocumentResponse } from "@monorepo/shared";
 
-type UploadedFile = {
-  id: string;
-  name: string;
-  size: string;
-  uploadedAt: string;
+type FileManagementProps = {
+  files: UploadedFile[];
+  onFilesChange: (files: UploadedFile[] | ((prev: UploadedFile[]) => UploadedFile[])) => void;
 };
 
-const FileManagement = () => {
-  const [files, setFiles] = useState<UploadedFile[]>([
-    {
-      id: "1",
-      name: "dokument_przykładowy.pdf",
-      size: "2.4 MB",
-      uploadedAt: "2024-01-15",
-    },
-  ]);
+const FileManagement = ({ files, onFilesChange }: FileManagementProps) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -32,41 +25,93 @@ const FileManagement = () => {
     setIsDragging(false);
   }, []);
 
+  const handleFiles = useCallback(async (newFiles: File[]) => {
+    const uploadedFilesList: UploadedFile[] = [];
+    
+    for (const file of newFiles) {
+      try {
+        const text = await file.text();
+        
+        const requestBody: AddDocumentRequest = {
+          content: text,
+          metadata: {
+            source: file.name,
+            uploadedAt: new Date().toISOString(),
+            size: file.size,
+            type: file.type,
+          },
+        };
+        
+        const response = await fetch('/api/documents/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: AddDocumentResponse = await response.json();
+        
+        if (!data.success || !data.documentId) {
+          throw new Error('Invalid response from backend');
+        }
+
+        const uploadedFile: UploadedFile = {
+          id: data.documentId,
+          name: file.name,
+          size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
+          uploadedAt: new Date().toLocaleDateString("pl-PL"),
+        };
+
+        uploadedFilesList.push(uploadedFile);
+        
+        toast({
+          title: "Plik przesłany",
+          description: `${file.name} został dodany do bazy RAG`,
+        });
+      } catch (error) {
+        console.error(`Error uploading file ${file.name}:`, error);
+        toast({
+          title: "Błąd przesyłania",
+          description: `Nie udało się przesłać pliku ${file.name}`,
+          variant: "destructive",
+        });
+      }
+    }
+    
+    if (uploadedFilesList.length > 0) {
+      onFilesChange((prev) => [...prev, ...uploadedFilesList]);
+    }
+  }, [onFilesChange, toast]);
+
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    async (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
 
       const droppedFiles = Array.from(e.dataTransfer.files);
-      handleFiles(droppedFiles);
+      setIsUploading(true);
+      await handleFiles(droppedFiles);
+      setIsUploading(false);
     },
-    []
+    [handleFiles]
   );
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInput = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
-      handleFiles(selectedFiles);
+      setIsUploading(true);
+      await handleFiles(selectedFiles);
+      setIsUploading(false);
     }
-  };
-
-  const handleFiles = (newFiles: File[]) => {
-    const uploadedFiles: UploadedFile[] = newFiles.map((file) => ({
-      id: Date.now().toString() + Math.random(),
-      name: file.name,
-      size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
-      uploadedAt: new Date().toLocaleDateString("pl-PL"),
-    }));
-
-    setFiles((prev) => [...prev, ...uploadedFiles]);
-    toast({
-      title: "Pliki przesłane",
-      description: `Pomyślnie przesłano ${newFiles.length} plik(ów)`,
-    });
-  };
+  }, [handleFiles]);
 
   const handleRemoveFile = (id: string) => {
-    setFiles((prev) => prev.filter((file) => file.id !== id));
+    onFilesChange(files.filter((file) => file.id !== id));
     toast({
       title: "Plik usunięty",
       description: "Plik został pomyślnie usunięty",
@@ -102,10 +147,10 @@ const FileManagement = () => {
             </p>
           </div>
           <label htmlFor="file-upload">
-            <Button type="button" className="gap-2" asChild>
+            <Button type="button" className="gap-2" asChild disabled={isUploading}>
               <span>
                 <Upload className="w-4 h-4" />
-                Wybierz pliki z dysku
+                {isUploading ? "Przesyłanie..." : "Wybierz pliki z dysku"}
               </span>
             </Button>
           </label>

@@ -3,8 +3,13 @@ import ChatSidebar, { Chat, UploadedFile } from "./ChatSidebar";
 import ChatMessages, { Message } from "./ChatMessages";
 import SourcesSidebar from "./SourcesSidebar";
 import { useToast } from "@/hooks/use-toast";
+import type { ChatResponse, ChatRequest } from "@monorepo/shared";
 
-const ChatView = () => {
+type ChatViewProps = {
+  availableFiles: UploadedFile[];
+};
+
+const ChatView = ({ availableFiles }: ChatViewProps) => {
   const { toast } = useToast();
   
   // Chats management
@@ -17,16 +22,6 @@ const ChatView = () => {
     },
   ]);
   const [activeChat, setActiveChat] = useState("1");
-
-  // Available files (shared from FileManagement - in real app would be in global state)
-  const [availableFiles] = useState<UploadedFile[]>([
-    {
-      id: "f1",
-      name: "dokument_przykładowy.pdf",
-      size: "2.4 MB",
-      uploadedAt: "2024-01-15",
-    },
-  ]);
 
   // Messages
   const [messages, setMessages] = useState<Message[]>([
@@ -108,11 +103,6 @@ const ChatView = () => {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const currentChat = chats.find((c) => c.id === activeChat);
-    const chatDocuments = availableFiles.filter((f) =>
-      currentChat?.documentIds.includes(f.id)
-    );
-
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -121,23 +111,63 @@ const ChatView = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const questionText = input;
     setInput("");
     setIsLoading(true);
 
-    // Symulacja odpowiedzi AI
-    setTimeout(() => {
+    try {
+      const requestBody: ChatRequest = {
+        question: questionText,
+        k: 3
+      };
+      
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: ChatResponse = await response.json();
+
+      if (!data.answer) {
+        throw new Error('Invalid response from backend: missing answer field');
+      }
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "To jest przykładowa odpowiedź wygenerowana przez model RAG. W rzeczywistej aplikacji tutaj pojawi się odpowiedź oparta na Twoich dokumentach.",
-        sources: chatDocuments.length > 0 
-          ? chatDocuments.map((doc) => doc.name)
-          : ["dokument_A.pdf", "strona_B.docx"],
+        content: data.answer,
+        sources: data.sources || [],
         chatId: activeChat,
       };
+      
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error calling chat API:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "Przepraszam, wystąpił błąd podczas przetwarzania Twojego pytania. Upewnij się, że backend działa i masz skonfigurowane klucze API w pliku .env",
+        chatId: activeChat,
+      };
+      
+      setMessages((prev) => [...prev, errorMessage]);
+      
+      toast({
+        title: "Błąd połączenia",
+        description: "Nie udało się połączyć z backendem RAG",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

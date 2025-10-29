@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Bot, MessageSquare, Files, LogOut } from "lucide-react";
 import ChatView from "@/components/ChatView";
 import FileManagement from "@/components/FileManagement";
+import type { UploadedFile } from "@/components/ChatSidebar";
 
 type View = "chat" | "files";
 
 const Dashboard = () => {
   const [activeView, setActiveView] = useState<View>("chat");
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -83,7 +85,14 @@ const Dashboard = () => {
 
       {/* Content Area */}
       <main className="flex-1 container mx-auto p-4 animate-fade-in">
-        {activeView === "chat" ? <ChatView /> : <FileManagement />}
+        {activeView === "chat" ? (
+          <ChatView availableFiles={uploadedFiles} />
+        ) : (
+          <FileManagement 
+            files={uploadedFiles} 
+            onFilesChange={setUploadedFiles} 
+          />
+        )}
       </main>
     </div>
   );

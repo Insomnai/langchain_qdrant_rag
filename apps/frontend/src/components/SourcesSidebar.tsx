@@ -23,11 +23,18 @@ const SourcesSidebar = ({ messages }: SourcesSidebarProps) => {
               message.sources?.map((source, idx) => (
                 <div
                   key={`${message.id}-${idx}`}
-                  className="p-3 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors cursor-pointer"
+                  className="p-3 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
                 >
                   <div className="flex items-start gap-2">
                     <FileText className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <span className="text-sm break-all">{source}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground mb-1">
+                        {source.metadata?.source || 'Dokument'}
+                      </p>
+                      <p className="text-xs text-muted-foreground line-clamp-3">
+                        {source.content}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))
