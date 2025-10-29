@@ -2,6 +2,9 @@
 
 Kompletny schemat bazy danych PostgreSQL dla aplikacji RAG.
 
+> **📘 Pełny przewodnik deployment:**  
+> Jeśli instalujesz całą aplikację od zera na VPS, zobacz **[DEPLOYMENT_VPS.md](../../DEPLOYMENT_VPS.md)** dla kompletnych instrukcji krok po kroku (PostgreSQL + Qdrant + Node.js + Nginx + SSL).
+
 ## 📦 Zawartość
 
 ```
