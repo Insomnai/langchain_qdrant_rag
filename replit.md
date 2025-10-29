@@ -109,6 +109,7 @@ Zadawanie pytań do RAG system
 server: {
   host: "0.0.0.0",
   port: 5000,
+  allowedHosts: true,  // OBLIGATORYJNE dla Replit preview
   proxy: {
     '/api': {
       target: 'http://localhost:3000',
