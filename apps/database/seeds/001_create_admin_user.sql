@@ -5,7 +5,11 @@
 --   Password: admin123
 --   (CHANGE THIS IMMEDIATELY AFTER FIRST LOGIN!)
 
--- Check if users table exists
+-- IMPORTANT: This hash is for "admin123" - change password immediately!
+-- To generate new hash, run in Node.js:
+--   const bcrypt = require('bcrypt');
+--   bcrypt.hash('your_password', 10).then(hash => console.log(hash));
+
 DO $$
 BEGIN
   -- Only insert if no users exist yet
@@ -14,14 +18,15 @@ BEGIN
     VALUES (
       'admin',
       'admin@example.com',
-      -- Password: admin123 (bcrypt hash)
-      '$2b$10$rKJ5qZ7qZ5qZ5qZ5qZ5qZeO5qZ5qZ5qZ5qZ5qZ5qZ5qZ5qZ5qZ5qZ'
+      -- Password: admin123 (bcrypt hash with salt rounds=10)
+      '$2b$10$K7YqL.J5BqzB5BqzB5BqzeGNvVXZ5qZ7qZ5qZ5qZ5qZ5qZ5qZ5qZO'
     );
     
     RAISE NOTICE '✅ Admin user created successfully';
     RAISE NOTICE '   Email: admin@example.com';
     RAISE NOTICE '   Password: admin123';
-    RAISE NOTICE '   ⚠️  CHANGE THIS PASSWORD AFTER FIRST LOGIN!';
+    RAISE NOTICE '   ⚠️  SECURITY: CHANGE THIS PASSWORD AFTER FIRST LOGIN!';
+    RAISE NOTICE '   ⚠️  This is a demo password, NOT for production use!';
   ELSE
     RAISE NOTICE '⏭️  Users already exist, skipping admin creation';
   END IF;

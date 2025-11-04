@@ -2,13 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import { validateConfig } from './src/config/env.js';
+import { initializeRAG, getVectorStore, getRAGChain } from './src/rag/index.js';
+import { createDocumentsFromText, splitDocuments } from './src/utils/documentLoader.js';
 import {
-  createVectorStore,
   createVectorStoreFromDocuments,
   addDocumentsToVectorStore,
 } from './src/rag/vectorStore.js';
 import { createRAGChainWithSources } from './src/rag/chain.js';
-import { createDocumentsFromText, splitDocuments } from './src/utils/documentLoader.js';
 import { testDatabaseConnection, getPool } from './src/config/database.js';
 import { authenticateToken } from './src/middleware/auth.js';
 import * as authController from './src/controllers/auth.js';
@@ -21,83 +21,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-let vectorStore = null;
-let ragChain = null;
-
-async function initializeRAG() {
-  console.log('🔄 Initializing RAG system...');
-  
-  if (!validateConfig()) {
-    console.error('❌ Configuration invalid. Please check your .env file');
-    return false;
-  }
-
-  try {
-    vectorStore = await createVectorStore();
-    ragChain = await createRAGChainWithSources(vectorStore, {
-      modelName: 'gpt-3.5-turbo',
-      temperature: 0.3,
-      k: 3,
-    });
-    console.log('✅ RAG system initialized successfully');
-    return true;
-  } catch (error) {
-    if (error.message?.includes('Collection') || error.message?.includes('not found')) {
-      console.log('⚠️  Collection does not exist yet. Will create on first document upload.');
-      return true;
-    }
-    console.error('❌ Failed to initialize RAG:', error.message);
-    return false;
-  }
-}
-
-export function getRAG() {
-  if (!ragChain || !vectorStore) {
-    return null;
-  }
-  
-  return {
-    async query(question, k = 3) {
-      const result = await ragChain.invoke(question);
-      return {
-        answer: result.answer,
-        sources: result.sources.map(doc => ({
-          pageContent: doc.pageContent,
-          metadata: doc.metadata,
-        })),
-      };
-    },
-    
-    async addDocuments(documents) {
-      const splitDocs = await splitDocuments(documents, {
-        chunkSize: 1000,
-        chunkOverlap: 200,
-      });
-
-      if (!vectorStore) {
-        vectorStore = await createVectorStoreFromDocuments(splitDocs);
-        ragChain = await createRAGChainWithSources(vectorStore, {
-          modelName: 'gpt-3.5-turbo',
-          temperature: 0.3,
-          k: 3,
-        });
-      } else {
-        await addDocumentsToVectorStore(vectorStore, splitDocs);
-      }
-
-      return {
-        chunkCount: splitDocs.length,
-        chunks: splitDocs.map((doc, index) => ({
-          pageContent: doc.pageContent,
-          metadata: { ...doc.metadata, chunkIndex: index }
-        }))
-      };
-    }
-  };
-}
+// RAG state is now managed in src/rag/index.js
 
 app.get('/api/health', async (req, res) => {
   try {
+    const vectorStore = getVectorStore();
     const qdrantConnected = vectorStore !== null;
     let databaseConnected = false;
     
@@ -188,9 +116,11 @@ app.post('/api/documents/add-legacy', async (req, res) => {
       chunkOverlap: 200,
     });
 
+    let vectorStore = getVectorStore();
+    
     if (!vectorStore) {
       vectorStore = await createVectorStoreFromDocuments(splitDocs);
-      ragChain = await createRAGChainWithSources(vectorStore, {
+      const ragChain = await createRAGChainWithSources(vectorStore, {
         modelName: 'gpt-3.5-turbo',
         temperature: 0.3,
         k: 3,
@@ -224,6 +154,9 @@ app.post('/api/chat-legacy', async (req, res) => {
       });
     }
 
+    const vectorStore = getVectorStore();
+    const ragChain = getRAGChain();
+    
     if (!ragChain || !vectorStore) {
       return res.status(400).json({
         error: 'NO_DOCUMENTS',

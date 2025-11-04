@@ -3,18 +3,54 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Bot } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Bot, Loader2 } from "lucide-react";
+import { api } from "@/lib/api";
+import { setToken, setUser } from "@/lib/auth";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Symulacja logowania
-    if (username && password) {
-      navigate("/dashboard");
+    
+    if (!email || !password) {
+      toast({
+        title: "Błąd",
+        description: "Wypełnij wszystkie pola",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await api.auth.login(email, password);
+      
+      if (response.success) {
+        setToken(response.token);
+        setUser(response.user);
+        
+        toast({
+          title: "Zalogowano!",
+          description: `Witaj, ${response.user.username}!`,
+        });
+        
+        navigate("/dashboard");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Błąd logowania",
+        description: error.message || "Nieprawidłowy email lub hasło",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -36,13 +72,14 @@ const Login = () => {
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="bg-card border border-border rounded-xl p-8 space-y-6 hover-glow">
             <div className="space-y-2">
-              <Label htmlFor="username">Nazwa użytkownika</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Wprowadź nazwę użytkownika"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="admin@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
                 required
                 className="h-11"
               />
@@ -56,6 +93,7 @@ const Login = () => {
                 placeholder="Wprowadź hasło"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
                 required
                 className="h-11"
               />
@@ -65,9 +103,21 @@ const Login = () => {
               type="submit"
               className="w-full h-11 text-base font-medium"
               size="lg"
+              disabled={isLoading}
             >
-              Zaloguj
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logowanie...
+                </>
+              ) : (
+                'Zaloguj'
+              )}
             </Button>
+          </div>
+
+          <div className="text-center text-sm text-muted-foreground">
+            <p>Dane domyślne: admin@example.com / admin123</p>
           </div>
         </form>
       </div>

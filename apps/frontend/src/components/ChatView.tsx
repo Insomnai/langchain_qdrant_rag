@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ChatSidebar, { Chat, UploadedFile } from "./ChatSidebar";
 import ChatMessages, { Message } from "./ChatMessages";
 import SourcesSidebar from "./SourcesSidebar";
 import { useToast } from "@/hooks/use-toast";
-import type { ChatResponse, ChatRequest } from "@monorepo/shared";
+import { api } from "@/lib/api";
 
 type ChatViewProps = {
   availableFiles: UploadedFile[];
@@ -12,58 +12,119 @@ type ChatViewProps = {
 const ChatView = ({ availableFiles }: ChatViewProps) => {
   const { toast } = useToast();
   
-  // Chats management
-  const [chats, setChats] = useState<Chat[]>([
-    {
-      id: "1",
-      name: "Czat domyślny",
-      createdAt: new Date().toLocaleDateString("pl-PL"),
-      documentIds: [],
-    },
-  ]);
-  const [activeChat, setActiveChat] = useState("1");
-
-  // Messages
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content: "Witaj! Jestem asystentem RAG. Mogę odpowiadać na pytania na podstawie przesłanych przez Ciebie dokumentów. Jak mogę Ci pomóc?",
-      chatId: "1",
-    },
-  ]);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
 
-  // Filter messages for active chat
-  const activeChatMessages = messages.filter((m) => m.chatId === activeChat);
+  // Load sessions from backend on mount
+  useEffect(() => {
+    loadSessions();
+  }, []);
 
-  const handleChatCreate = (name: string) => {
-    const newChat: Chat = {
-      id: Date.now().toString(),
-      name,
-      createdAt: new Date().toLocaleDateString("pl-PL"),
-      documentIds: [],
-    };
-    setChats((prev) => [...prev, newChat]);
-    setActiveChat(newChat.id);
-    
-    // Add welcome message for new chat
-    const welcomeMessage: Message = {
-      id: Date.now().toString(),
-      role: "assistant",
-      content: "Witaj w nowym czacie! Mogę odpowiadać na pytania na podstawie przypisanych dokumentów. Jak mogę Ci pomóc?",
-      chatId: newChat.id,
-    };
-    setMessages((prev) => [...prev, welcomeMessage]);
-    
-    toast({
-      title: "Czat utworzony",
-      description: `Pomyślnie utworzono czat "${name}"`,
-    });
+  // Load messages when active chat changes
+  useEffect(() => {
+    if (activeChat) {
+      loadMessages(activeChat);
+    }
+  }, [activeChat]);
+
+  const loadSessions = async () => {
+    try {
+      setIsLoadingSessions(true);
+      const response = await api.chat.getSessions();
+      
+      if (response.success && response.sessions) {
+        const formattedChats: Chat[] = response.sessions.map((session: any) => ({
+          id: session.id,
+          name: session.title || 'Nowa rozmowa',
+          createdAt: new Date(session.created_at).toLocaleDateString("pl-PL"),
+          documentIds: [],
+        }));
+        
+        setChats(formattedChats);
+        
+        // Set first chat as active if exists
+        if (formattedChats.length > 0 && !activeChat) {
+          setActiveChat(formattedChats[0].id);
+        } else if (formattedChats.length === 0) {
+          // Create initial chat if none exist
+          handleChatCreate("Czat domyślny");
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to load sessions:', error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się załadować historii czatów",
+        variant: "destructive",
+      });
+      
+      // Create initial chat on error
+      handleChatCreate("Czat domyślny");
+    } finally {
+      setIsLoadingSessions(false);
+    }
   };
 
-  const handleChatDelete = (chatId: string) => {
+  const loadMessages = async (sessionId: string) => {
+    try {
+      const response = await api.chat.getMessages(sessionId);
+      
+      if (response.success && response.messages) {
+        const formattedMessages: Message[] = response.messages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          sources: msg.sources || [],
+          chatId: sessionId,
+        }));
+        
+        setMessages(formattedMessages);
+      }
+    } catch (error: any) {
+      console.error('Failed to load messages:', error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się załadować wiadomości",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleChatCreate = async (name: string) => {
+    try {
+      const response = await api.chat.createSession(name);
+      
+      if (response.success && response.session) {
+        const newChat: Chat = {
+          id: response.session.id,
+          name: name,
+          createdAt: new Date(response.session.created_at).toLocaleDateString("pl-PL"),
+          documentIds: [],
+        };
+        
+        setChats((prev) => [newChat, ...prev]);
+        setActiveChat(newChat.id);
+        setMessages([]);
+        
+        toast({
+          title: "Czat utworzony",
+          description: `Pomyślnie utworzono czat "${name}"`,
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Błąd",
+        description: "Nie udało się utworzyć czatu",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleChatDelete = async (chatId: string) => {
     if (chats.length === 1) {
       toast({
         title: "Nie można usunąć",
@@ -73,18 +134,27 @@ const ChatView = ({ availableFiles }: ChatViewProps) => {
       return;
     }
 
-    setChats((prev) => prev.filter((c) => c.id !== chatId));
-    setMessages((prev) => prev.filter((m) => m.chatId !== chatId));
+    try {
+      await api.chat.deleteSession(chatId);
+      
+      setChats((prev) => prev.filter((c) => c.id !== chatId));
+      
+      if (activeChat === chatId) {
+        const remainingChats = chats.filter((c) => c.id !== chatId);
+        setActiveChat(remainingChats[0]?.id || null);
+      }
 
-    if (activeChat === chatId) {
-      const remainingChats = chats.filter((c) => c.id !== chatId);
-      setActiveChat(remainingChats[0].id);
+      toast({
+        title: "Czat usunięty",
+        description: "Czat został pomyślnie usunięty",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Błąd",
+        description: "Nie udało się usunąć czatu",
+        variant: "destructive",
+      });
     }
-
-    toast({
-      title: "Czat usunięty",
-      description: "Czat został pomyślnie usunięty",
-    });
   };
 
   const handleChatDocumentsUpdate = (chatId: string, documentIds: string[]) => {
@@ -101,68 +171,55 @@ const ChatView = ({ availableFiles }: ChatViewProps) => {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !activeChat) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-      chatId: activeChat,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
     const questionText = input;
     setInput("");
     setIsLoading(true);
 
+    // Optimistic UI update
+    const tempUserMessage: Message = {
+      id: `temp-${Date.now()}`,
+      role: "user",
+      content: questionText,
+      chatId: activeChat,
+    };
+    setMessages((prev) => [...prev, tempUserMessage]);
+
     try {
-      const requestBody: ChatRequest = {
-        question: questionText,
-        k: 3
-      };
+      const response = await api.chat.sendMessage(activeChat, questionText, 3);
       
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (response.success && response.message) {
+        // Remove temp message and add real messages
+        setMessages((prev) => {
+          const filtered = prev.filter(m => m.id !== tempUserMessage.id);
+          return [
+            ...filtered,
+            {
+              id: `user-${Date.now()}`,
+              role: "user",
+              content: questionText,
+              chatId: activeChat,
+            },
+            {
+              id: response.message.id,
+              role: "assistant",
+              content: response.message.content,
+              sources: response.message.sources || [],
+              chatId: activeChat,
+            },
+          ];
+        });
       }
-
-      const data: ChatResponse = await response.json();
-
-      if (!data.answer) {
-        throw new Error('Invalid response from backend: missing answer field');
-      }
-
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.answer,
-        sources: data.sources || [],
-        chatId: activeChat,
-      };
+    } catch (error: any) {
+      console.error('Error sending message:', error);
       
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (error) {
-      console.error('Error calling chat API:', error);
-      
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "Przepraszam, wystąpił błąd podczas przetwarzania Twojego pytania. Upewnij się, że backend działa i masz skonfigurowane klucze API w pliku .env",
-        chatId: activeChat,
-      };
-      
-      setMessages((prev) => [...prev, errorMessage]);
+      // Remove temp message
+      setMessages((prev) => prev.filter(m => m.id !== tempUserMessage.id));
       
       toast({
-        title: "Błąd połączenia",
-        description: "Nie udało się połączyć z backendem RAG",
+        title: "Błąd",
+        description: error.message || "Nie udało się wysłać wiadomości",
         variant: "destructive",
       });
     } finally {
@@ -170,36 +227,41 @@ const ChatView = ({ availableFiles }: ChatViewProps) => {
     }
   };
 
+  const activeChatMessages = messages.filter((m) => m.chatId === activeChat);
+
+  if (isLoadingSessions) {
+    return (
+      <div className="h-[calc(100vh-8rem)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-muted-foreground">Ładowanie czatów...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-8rem)] grid grid-cols-[320px_1fr_320px] gap-4 p-4">
-      {/* Chat Sidebar */}
-      <div className="rounded-lg overflow-hidden shadow-sm">
-        <ChatSidebar
-          chats={chats}
-          activeChat={activeChat}
-          onChatSelect={setActiveChat}
-          onChatCreate={handleChatCreate}
-          onChatDelete={handleChatDelete}
-          onChatDocumentsUpdate={handleChatDocumentsUpdate}
-          availableFiles={availableFiles}
-        />
-      </div>
+      <ChatSidebar
+        chats={chats}
+        activeChat={activeChat || ""}
+        onChatSelect={setActiveChat}
+        onChatCreate={handleChatCreate}
+        onChatDelete={handleChatDelete}
+        onChatDocumentsUpdate={handleChatDocumentsUpdate}
+        availableFiles={availableFiles}
+      />
 
-      {/* Main Chat Area */}
-      <div className="rounded-lg overflow-hidden shadow-sm">
-        <ChatMessages
-          messages={activeChatMessages}
-          input={input}
-          isLoading={isLoading}
-          onInputChange={setInput}
-          onSend={handleSend}
-        />
-      </div>
+      <ChatMessages
+        messages={activeChatMessages}
+        input={input}
+        onInputChange={setInput}
+        onSend={handleSend}
+        isLoading={isLoading}
+      />
 
-      {/* Sources Sidebar - Desktop Only */}
-      <div className="hidden lg:block rounded-lg overflow-hidden shadow-sm">
-        <SourcesSidebar messages={activeChatMessages} />
-      </div>
+      <SourcesSidebar
+        messages={activeChatMessages.filter((m) => m.role === "assistant")}
+      />
     </div>
   );
 };

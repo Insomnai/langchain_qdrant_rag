@@ -879,6 +879,147 @@ https://your_domain.com
 
 ---
 
+## 🔄 Aktualizacja Aplikacji na VPS
+
+Gdy wprowadzisz zmiany w kodzie na Replit i chcesz je wdrożyć na VPS:
+
+### Metoda 1: Pobierz ZIP i Upload (Zalecane dla dużych zmian)
+
+1. **Pobierz ZIP z Replit**
+   - Kliknij trzy kropki (...) obok nazwy projektu w Replit
+   - Wybierz "Download as ZIP"
+   - Zapisz plik na swoim komputerze
+
+2. **Upload na VPS**
+   ```bash
+   # Na swoim komputerze (z folderu gdzie jest ZIP)
+   scp rag-app.zip user@62.169.26.253:/tmp/
+   ```
+
+3. **Zainstaluj zmiany na VPS**
+   ```bash
+   # Połącz się z VPS
+   ssh user@62.169.26.253
+   
+   # Zatrzymaj aplikację
+   pm2 stop all
+   
+   # Backup obecnej wersji
+   cd /var/www
+   cp -r rag-app rag-app-backup-$(date +%Y%m%d-%H%M%S)
+   
+   # Rozpakuj nową wersję
+   cd /tmp
+   unzip -o rag-app.zip -d rag-app-new
+   
+   # Skopiuj pliki (zachowaj .env!)
+   cp /var/www/rag-app/.env /tmp/.env.backup
+   rm -rf /var/www/rag-app/*
+   mv rag-app-new/* /var/www/rag-app/
+   mv /tmp/.env.backup /var/www/rag-app/.env
+   
+   # Zainstaluj zależności
+   cd /var/www/rag-app
+   npm install
+   
+   # Uruchom migrations jeśli były zmiany w bazie
+   psql -d klient_rag -f apps/database/setup.sql  # Tylko jeśli nowe tabele
+   psql -d klient_rag -f apps/database/seeds/001_create_admin_user.sql  # Tylko przy pierwszej instalacji
+   
+   # Restart aplikacji
+   pm2 restart all
+   pm2 save
+   
+   # Sprawdź logi
+   pm2 logs --lines 50
+   ```
+
+### Metoda 2: Git Pull (Zalecane dla małych zmian)
+
+Jeśli używasz Git repository:
+
+```bash
+# Połącz się z VPS
+ssh user@62.169.26.253
+
+# Przejdź do folderu aplikacji
+cd /var/www/rag-app
+
+# Zatrzymaj aplikację
+pm2 stop all
+
+# Pobierz zmiany
+git pull origin main
+
+# Zainstaluj nowe zależności (jeśli były)
+npm install
+
+# Restart aplikacji
+pm2 restart all
+pm2 save
+
+# Sprawdź logi
+pm2 logs --lines 20
+```
+
+### Metoda 3: Tylko Backend ALBO Frontend
+
+**Aktualizacja tylko backendu:**
+```bash
+pm2 stop rag-backend
+cd /var/www/rag-app/apps/backend
+npm install  # jeśli były zmiany w dependencies
+pm2 restart rag-backend
+```
+
+**Aktualizacja tylko frontendu:**
+```bash
+pm2 stop rag-frontend
+cd /var/www/rag-app/apps/frontend
+npm install  # jeśli były zmiany w dependencies
+npm run build  # rebuild static files
+pm2 restart rag-frontend
+```
+
+### ⚠️ UWAGA: Zachowaj .env!
+
+Zawsze upewnij się że **NIE nadpisujesz** pliku `.env` z VPS! Zawiera on Twoje prawdziwe klucze API i hasła do bazy.
+
+```bash
+# Backup .env przed każdą aktualizacją
+cp /var/www/rag-app/.env /var/www/rag-app/.env.backup
+```
+
+### Sprawdzenie czy działa
+
+```bash
+# Sprawdź status PM2
+pm2 status
+
+# Zobacz logi
+pm2 logs --lines 50
+
+# Test w przeglądarce
+curl http://localhost:3000/api/health
+curl http://localhost:5000
+```
+
+### Rollback w razie problemu
+
+```bash
+# Zatrzymaj aplikację
+pm2 stop all
+
+# Przywróć backup
+rm -rf /var/www/rag-app
+mv /var/www/rag-app-backup-TIMESTAMP /var/www/rag-app
+
+# Restart
+pm2 restart all
+```
+
+---
+
 ## 📚 Dodatkowe Zasoby
 
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)

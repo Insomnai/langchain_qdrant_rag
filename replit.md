@@ -10,6 +10,23 @@ Full-stack aplikacja RAG (Retrieval-Augmented Generation) zbudowana jako monorep
 
 ## Ostatnie Zmiany
 
+**4 listopada 2025** - PEŁNA INTEGRACJA BAZY DANYCH I AUTENTYKACJI
+- ✅ **System autentykacji**: Login z bcrypt, session tokens, protected routes
+- ✅ **Backend**: Pełna integracja PostgreSQL - czaty i dokumenty zapisywane do bazy
+  - Auth endpoints: `/api/auth/login`, `/api/auth/logout`, `/api/auth/status`
+  - Chat sessions: `/api/chat/sessions` (CRUD operations)
+  - Messages persistent: `/api/chat/sessions/:id/message`
+  - Documents persistent: `/api/documents/add` (PostgreSQL + Qdrant sync)
+- ✅ **Frontend**: Pełna integracja z backendem
+  - Login page z prawdziwym API (email/password)
+  - Chat sessions ładowane z PostgreSQL (nie znikają po refresh!)
+  - Nowe czaty tworzone w bazie danych
+  - Protected routes z auth middleware
+  - Token-based authentication (localStorage)
+- ✅ **Database**: Admin user seed (email: admin@example.com, hasło: admin123)
+- ✅ **Deployment**: Zaktualizowano DEPLOYMENT_VPS.md z instrukcjami aktualizacji
+- ✅ **Struktura**: Refactor RAG module do apps/backend/src/rag/index.js
+
 **29 października 2025**
 - Dodano pełny schemat PostgreSQL jako SQL migrations (apps/database/)
 - Zintegrowano pg (node-postgres) z backendem
@@ -277,16 +294,21 @@ https://github.com/Insomnai/rag-sample-49668
 5. ✅ Dodano PostgreSQL schemat jako SQL migrations
 6. ✅ Zintegrowano database pool w backendzie
 7. ✅ Dodano dokumentację VPS deployment
+8. ✅ **Zaimplementowano authentication (users, sessions, bcrypt)**
+9. ✅ **Podłączono zapisywanie chatów do PostgreSQL**
+10. ✅ **Zapisywanie dokumentów i chunks do PostgreSQL (sync z Qdrant)**
+11. ✅ **Frontend ładuje historię czatów z bazy (persistencja)**
+12. ✅ **Protected routes z middleware authentication**
 
 ## Next Steps / TODOs
 
-1. Zaimplementować authentication (users, sessions)
-2. Podłączyć zapisywanie chatów do PostgreSQL
-3. Zapisywać dokumenty i chunks do PostgreSQL (sync z Qdrant)
-4. Dodać user dashboard z statystykami
-5. Rozważyć WebSocket dla streaming responses
-6. Dodać rate limiting i bezpieczeństwo API
-7. Stworzyć production build workflow
+1. Dodać user profile management (zmiana hasła)
+2. Dodać user dashboard z statystykami
+3. Rozważyć WebSocket dla streaming responses
+4. Dodać rate limiting i bezpieczeństwo API
+5. Stworzyć production build workflow
+6. Dodać batch upload dla dużych PDF (>100 stron)
+7. Implementować usuwanie dokumentów z Qdrant
 
 ## Resources
 

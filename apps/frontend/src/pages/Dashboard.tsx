@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Bot, MessageSquare, Files, LogOut } from "lucide-react";
 import ChatView from "@/components/ChatView";
 import FileManagement from "@/components/FileManagement";
 import type { UploadedFile } from "@/components/ChatSidebar";
+import { isAuthenticated, logout, getUser } from "@/lib/auth";
+import { api } from "@/lib/api";
 
 type View = "chat" | "files";
 
@@ -12,10 +14,28 @@ const Dashboard = () => {
   const [activeView, setActiveView] = useState<View>("chat");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const navigate = useNavigate();
+  const user = getUser();
 
-  const handleLogout = () => {
-    navigate("/");
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      navigate("/");
+    }
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    try {
+      await api.auth.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      logout();
+      navigate("/");
+    }
   };
+
+  if (!isAuthenticated()) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -26,6 +46,11 @@ const Dashboard = () => {
             <div className="flex items-center gap-2">
               <Bot className="w-6 h-6 text-primary" />
               <span className="text-xl font-bold text-gradient">RAG Assistant</span>
+              {user && (
+                <span className="hidden lg:inline text-sm text-muted-foreground ml-2">
+                  · {user.username}
+                </span>
+              )}
             </div>
 
             <div className="hidden md:flex items-center gap-2">

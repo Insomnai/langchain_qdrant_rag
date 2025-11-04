@@ -4,6 +4,7 @@ import { Upload, File, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { UploadedFile } from "./ChatSidebar";
 import type { AddDocumentRequest, AddDocumentResponse } from "@monorepo/shared";
+import { api } from "@/lib/api";
 
 type FileManagementProps = {
   files: UploadedFile[];
@@ -32,29 +33,14 @@ const FileManagement = ({ files, onFilesChange }: FileManagementProps) => {
       try {
         const text = await file.text();
         
-        const requestBody: AddDocumentRequest = {
-          content: text,
-          metadata: {
-            source: file.name,
-            uploadedAt: new Date().toISOString(),
-            size: file.size,
-            type: file.type,
-          },
+        const metadata = {
+          filename: file.name,
+          uploadedAt: new Date().toISOString(),
+          size: file.size,
+          type: file.type,
         };
         
-        const response = await fetch('/api/documents/add', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data: AddDocumentResponse = await response.json();
+        const data = await api.documents.add(text, metadata);
         
         if (!data.success || !data.documentId) {
           throw new Error('Invalid response from backend');
