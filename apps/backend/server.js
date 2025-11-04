@@ -10,6 +10,10 @@ import {
 import { createRAGChainWithSources } from './src/rag/chain.js';
 import { createDocumentsFromText, splitDocuments } from './src/utils/documentLoader.js';
 import { testDatabaseConnection, getPool } from './src/config/database.js';
+import { authenticateToken } from './src/middleware/auth.js';
+import * as authController from './src/controllers/auth.js';
+import * as chatController from './src/controllers/chat.js';
+import * as documentsController from './src/controllers/documents.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +49,51 @@ async function initializeRAG() {
     console.error('❌ Failed to initialize RAG:', error.message);
     return false;
   }
+}
+
+export function getRAG() {
+  if (!ragChain || !vectorStore) {
+    return null;
+  }
+  
+  return {
+    async query(question, k = 3) {
+      const result = await ragChain.invoke(question);
+      return {
+        answer: result.answer,
+        sources: result.sources.map(doc => ({
+          pageContent: doc.pageContent,
+          metadata: doc.metadata,
+        })),
+      };
+    },
+    
+    async addDocuments(documents) {
+      const splitDocs = await splitDocuments(documents, {
+        chunkSize: 1000,
+        chunkOverlap: 200,
+      });
+
+      if (!vectorStore) {
+        vectorStore = await createVectorStoreFromDocuments(splitDocs);
+        ragChain = await createRAGChainWithSources(vectorStore, {
+          modelName: 'gpt-3.5-turbo',
+          temperature: 0.3,
+          k: 3,
+        });
+      } else {
+        await addDocumentsToVectorStore(vectorStore, splitDocs);
+      }
+
+      return {
+        chunkCount: splitDocs.length,
+        chunks: splitDocs.map((doc, index) => ({
+          pageContent: doc.pageContent,
+          metadata: { ...doc.metadata, chunkIndex: index }
+        }))
+      };
+    }
+  };
 }
 
 app.get('/api/health', async (req, res) => {
@@ -84,7 +133,38 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-app.post('/api/documents/add', async (req, res) => {
+// ============================================
+// AUTH ROUTES (public)
+// ============================================
+
+app.post('/api/auth/login', authController.login);
+app.post('/api/auth/logout', authController.logout);
+app.get('/api/auth/status', authController.getStatus);
+
+// ============================================
+// CHAT SESSION ROUTES (protected)
+// ============================================
+
+app.post('/api/chat/sessions', authenticateToken, chatController.createSession);
+app.get('/api/chat/sessions', authenticateToken, chatController.getSessions);
+app.get('/api/chat/sessions/:id/messages', authenticateToken, chatController.getSessionMessages);
+app.post('/api/chat/sessions/:id/message', authenticateToken, chatController.sendMessage);
+app.delete('/api/chat/sessions/:id', authenticateToken, chatController.deleteSession);
+
+// ============================================
+// DOCUMENT ROUTES (protected)
+// ============================================
+
+app.post('/api/documents/add', authenticateToken, documentsController.addDocument);
+app.get('/api/documents', authenticateToken, documentsController.getDocuments);
+app.get('/api/documents/:id', authenticateToken, documentsController.getDocument);
+app.delete('/api/documents/:id', authenticateToken, documentsController.deleteDocument);
+
+// ============================================
+// LEGACY ROUTES (kept for backward compatibility, unprotected)
+// ============================================
+
+app.post('/api/documents/add-legacy', async (req, res) => {
   try {
     const { content, metadata = {} } = req.body;
 
@@ -133,7 +213,7 @@ app.post('/api/documents/add', async (req, res) => {
   }
 });
 
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat-legacy', async (req, res) => {
   try {
     const { question, k = 3 } = req.body;
 
