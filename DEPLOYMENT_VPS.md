@@ -463,8 +463,16 @@ pm2 start ecosystem.config.js
 
 # Sprawdź status
 pm2 status
-pm2 logs rag-backend --lines 50
 
+# Zobacz logi (pokazuje logi na żywo)
+pm2 logs rag-backend --lines 50
+```
+
+**⚠️ WAŻNE:** Komenda `pm2 logs` pokazuje logi **na żywo** i nie kończy się automatycznie.  
+Po zobaczeniu logów (backend uruchomiony, baza podłączona, RAG gotowy) **wciśnij `Ctrl + C`** aby wyjść i kontynuować.
+
+```bash
+# Teraz dopiero te komendy (po Ctrl+C):
 # Auto-start przy restarcie serwera
 pm2 startup
 pm2 save
