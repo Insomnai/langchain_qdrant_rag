@@ -10,6 +10,18 @@ Full-stack aplikacja RAG (Retrieval-Augmented Generation) zbudowana jako monorep
 
 ## Ostatnie Zmiany
 
+**6 listopada 2025** - NAPRAWA DEPENDENCY CONFLICTS
+- ✅ **Fixed LangChain version conflicts**: Wszystkie pakiety zsynchronizowane do v0.3.x
+- ✅ **npm install działa bez błędów**: 669 pakietów zainstalowanych poprawnie
+- ✅ **Backend startuje bez crashowania**: Brak błędów "Cannot find module"
+- ✅ **Kompatybilne wersje**:
+  - @langchain/core: ^0.3.0 (było 1.0.2 - konflikt!)
+  - @langchain/openai: ^0.3.0
+  - @langchain/community: ^0.3.0
+  - @langchain/qdrant: ^0.1.3
+  - langchain: ^0.3.0
+- ✅ **Deployment instructions**: Dodano SZYBKI START sekcję w DEPLOYMENT_VPS.md
+
 **4 listopada 2025** - PEŁNA INTEGRACJA BAZY DANYCH I AUTENTYKACJI
 - ✅ **System autentykacji**: Login z bcrypt, session tokens, protected routes
 - ✅ **Backend**: Pełna integracja PostgreSQL - czaty i dokumenty zapisywane do bazy

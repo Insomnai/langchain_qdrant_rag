@@ -4,6 +4,45 @@ Ten przewodnik przeprowadzi Cię przez **pełną instalację** aplikacji RAG na 
 
 ---
 
+## ⚡ SZYBKI START: Aktualizacja Aplikacji (Git Pull)
+
+**Jeśli aplikacja już działa na VPS i chcesz tylko zaktualizować kod:**
+
+```bash
+# 1. Połącz się z VPS
+ssh root@62.169.26.253  # lub ssh twoj_user@62.169.26.253
+
+# 2. Przejdź do folderu aplikacji
+cd /var/www/rag-app
+
+# 3. Pobierz najnowsze zmiany z GitHub
+git pull origin main
+
+# 4. Zainstaluj nowe dependencies (jeśli były zmiany)
+npm install
+
+# 5. Przebuduj frontend (jeśli były zmiany w UI)
+npm run build --workspace=apps/frontend
+
+# 6. Zrestartuj backend
+pm2 restart rag-backend
+
+# 7. Sprawdź czy działa
+pm2 logs rag-backend --lines 20
+```
+
+**✅ Gotowe!** Aplikacja zaktualizowana.
+
+**⚠️ UWAGA:** Twój plik `.env` z kluczami API zostanie zachowany - Git go nie nadpisuje (jest w `.gitignore`).
+
+---
+
+## 📖 Pełna Instalacja od Zera
+
+**Jeśli instalujesz aplikację po raz pierwszy, przejdź do sekcji poniżej:**
+
+---
+
 ## 📋 Wymagania
 
 ### VPS Server
