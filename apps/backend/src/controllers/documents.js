@@ -67,20 +67,22 @@ export async function addDocument(req, res) {
 
       // Save document chunks to database
       if (ragResult.chunks && ragResult.chunks.length > 0) {
+        const { randomUUID } = await import('crypto');
+        
         const chunkValues = ragResult.chunks.map((chunk, index) => 
           `($1, $${index * 4 + 2}, $${index * 4 + 3}, $${index * 4 + 4}, $${index * 4 + 5})`
         ).join(',');
 
         const chunkParams = [documentId];
         ragResult.chunks.forEach((chunk, index) => {
-          chunkParams.push(chunk.pageContent);
-          chunkParams.push(index);
-          chunkParams.push(JSON.stringify(chunk.metadata));
-          chunkParams.push(null); // embedding (we don't store it in PG)
+          chunkParams.push(chunk.pageContent);  // content
+          chunkParams.push(index);  // chunk_index
+          chunkParams.push(randomUUID());  // qdrant_point_id
+          chunkParams.push(JSON.stringify(chunk.metadata));  // metadata
         });
 
         await pool.query(
-          `INSERT INTO document_chunks (document_id, content, chunk_index, metadata, embedding)
+          `INSERT INTO document_chunks (document_id, content, chunk_index, qdrant_point_id, metadata)
            VALUES ${chunkValues}`,
           chunkParams
         );
@@ -97,7 +99,8 @@ export async function addDocument(req, res) {
       // If RAG fails, mark document as failed but keep in database
       await pool.query(
         `UPDATE documents 
-         SET is_processed = FALSE, metadata = metadata || '{"error": $1}'::jsonb
+         SET is_processed = FALSE, 
+             metadata = metadata || jsonb_build_object('error', $1)
          WHERE id = $2`,
         [ragError.message, documentId]
       );

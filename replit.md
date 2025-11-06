@@ -10,6 +10,17 @@ Full-stack aplikacja RAG (Retrieval-Augmented Generation) zbudowana jako monorep
 
 ## Ostatnie Zmiany
 
+**6 listopada 2025 (wieczór cz.3)** - NAPRAWA KRYTYCZNYCH BŁĘDÓW BACKEND
+- ✅ **Fixed document_chunks INSERT crash**: Naprawiono SQL query (documents.js)
+  - Dodano `qdrant_point_id` (UUID generowany przez crypto.randomUUID)
+  - Usunięto nieistniejącą kolumnę `embedding`
+  - Poprawiono kolejność parametrów SQL
+  - To był błąd powodujący crash uploadu plików na VPS
+- ✅ **Fixed metadata JSON parsing error**: Naprawiono error handling (documents.js linia 103-109)
+  - Zmieniono z string concatenation na `jsonb_build_object`
+  - Naprawiono błąd "Token $ is invalid" przy zapisie errorów do metadata
+- ✅ **Backend tested**: Aplikacja startuje bez crashów, kod skompilowany poprawnie
+
 **6 listopada 2025 (wieczór cz.2)** - NAPRAWA KRYTYCZNYCH BUGÓW UI
 - ✅ **Fixed file upload button**: Zmieniono z `asChild` na prawidłowe `onClick` (FileManagement.tsx)
 - ✅ **Fixed chat message duplication**: Uproszczono logikę wysyłania wiadomości (ChatView.tsx)
