@@ -19,7 +19,7 @@ ORDER BY cs.updated_at DESC;
 
 COMMENT ON VIEW user_recent_chats IS 'Recent chat sessions with message counts';
 
--- View: Document statistics with citation counts
+-- View: Document statistics
 CREATE OR REPLACE VIEW document_stats AS
 SELECT 
   d.id AS document_id,
@@ -29,15 +29,12 @@ SELECT
   d.upload_date,
   d.chunk_count,
   d.is_processed,
-  COUNT(DISTINCT cms.message_id) AS times_cited,
-  AVG(cms.relevance_score) AS avg_relevance_score,
-  MAX(cms.created_at) AS last_used_at
+  COUNT(DISTINCT dc.id) AS total_chunks
 FROM documents d
 LEFT JOIN document_chunks dc ON d.id = dc.document_id
-LEFT JOIN chat_message_sources cms ON dc.id = cms.document_chunk_id
 GROUP BY d.id, d.user_id, d.filename, d.file_size, d.upload_date, d.chunk_count, d.is_processed;
 
-COMMENT ON VIEW document_stats IS 'Document statistics including citation counts';
+COMMENT ON VIEW document_stats IS 'Document statistics with chunk counts';
 
 -- View: User activity summary
 CREATE OR REPLACE VIEW user_activity_summary AS

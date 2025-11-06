@@ -1173,7 +1173,23 @@ Creating functions and triggers...
 ==================================
 ```
 
-### Krok 4: Utwórz admin usera
+### Krok 4: Uruchom migration fix (WAŻNE!)
+
+```bash
+psql -U klientsql -d klient_rag -h localhost -f apps/database/migrations/011_fix_chat_message_sources.sql
+```
+
+**Podaj hasło:** `glutamina22`
+
+**Powinieneś zobaczyć:**
+```
+✅ chat_message_sources table fixed successfully
+   - Old schema with document_chunk_id removed
+   - New schema with source_content and source_metadata created
+   - Views recreated
+```
+
+### Krok 5: Utwórz admin usera
 
 ```bash
 psql -U klientsql -d klient_rag -h localhost -f apps/database/seeds/001_create_admin_user.sql
@@ -1189,7 +1205,7 @@ psql -U klientsql -d klient_rag -h localhost -f apps/database/seeds/001_create_a
    ⚠️  SECURITY: CHANGE THIS PASSWORD AFTER FIRST LOGIN!
 ```
 
-### Krok 5: Zrestartuj aplikację
+### Krok 6: Zrestartuj aplikację
 
 ```bash
 pm2 restart all
@@ -1197,7 +1213,7 @@ pm2 save
 pm2 logs --lines 30
 ```
 
-### Krok 6: Testuj login
+### Krok 7: Testuj login
 
 ```bash
 # Test API
@@ -1219,7 +1235,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 }
 ```
 
-### Krok 7: Otwórz aplikację w przeglądarce
+### Krok 8: Otwórz aplikację w przeglądarce
 
 1. Idź na `http://62.169.26.253` (lub swoją domenę)
 2. Zaloguj się:

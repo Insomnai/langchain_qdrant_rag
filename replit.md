@@ -10,7 +10,16 @@ Full-stack aplikacja RAG (Retrieval-Augmented Generation) zbudowana jako monorep
 
 ## Ostatnie Zmiany
 
-**6 listopada 2025** - NAPRAWA DEPENDENCY CONFLICTS
+**6 listopada 2025 (wieczór)** - NAPRAWA SCHEMATU BAZY DANYCH
+- ✅ **Fixed database schema mismatch**: Naprawiono tabelę `chat_message_sources`
+  - Zmieniono kolumny: `document_chunk_id` → `source_content`, `source_metadata`
+  - Backend używa `token_hash` zamiast `session_token` (wszystkie miejsca naprawione)
+  - Seed file ma prawdziwy bcrypt hash dla admin123
+  - Uproszczono widok `document_stats` (usunięto niedziałający JOIN)
+- ✅ **Migration 011**: Stworzono fix script do przebudowania tabeli na VPS
+- ✅ **DEPLOYMENT_VPS.md**: Zaktualizowano z instrukcjami pełnego odświeżenia
+
+**6 listopada 2025 (rano)** - NAPRAWA DEPENDENCY CONFLICTS
 - ✅ **Fixed LangChain version conflicts**: Wszystkie pakiety zsynchronizowane do v0.3.x
 - ✅ **npm install działa bez błędów**: 669 pakietów zainstalowanych poprawnie
 - ✅ **Backend startuje bez crashowania**: Brak błędów "Cannot find module"
