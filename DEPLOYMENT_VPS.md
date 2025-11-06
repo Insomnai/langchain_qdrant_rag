@@ -15,20 +15,24 @@ ssh root@62.169.26.253  # lub ssh twoj_user@62.169.26.253
 # 2. Przejdź do folderu aplikacji
 cd /var/www/rag-app
 
-# 3. Pobierz najnowsze zmiany z GitHub
+# 3. Zatrzymaj aplikację
+pm2 stop all
+
+# 4. Pobierz najnowsze zmiany z GitHub
 git pull origin main
 
-# 4. Zainstaluj nowe dependencies (jeśli były zmiany)
+# 5. Zainstaluj nowe dependencies (jeśli były zmiany)
 npm install
 
-# 5. Przebuduj frontend (jeśli były zmiany w UI)
+# 6. Przebuduj frontend (jeśli były zmiany w UI)
 npm run build --workspace=apps/frontend
 
-# 6. Zrestartuj backend
-pm2 restart rag-backend
+# 7. Zrestartuj aplikację
+pm2 restart all
+pm2 save
 
-# 7. Sprawdź czy działa
-pm2 logs rag-backend --lines 20
+# 8. Sprawdź czy działa
+pm2 logs --lines 30
 ```
 
 **✅ Gotowe!** Aplikacja zaktualizowana.
@@ -918,11 +922,42 @@ https://your_domain.com
 
 ---
 
-## 🔄 Aktualizacja Aplikacji na VPS
+## 🔄 ODŚWIEŻENIE APLIKACJI PO ZMIANACH W KODZIE
+
+**UWAGA: Jeśli usunąłeś bazę danych lub tabele, zobacz sekcję "PEŁNE ODŚWIEŻENIE" poniżej!**
 
 Gdy wprowadzisz zmiany w kodzie na Replit i chcesz je wdrożyć na VPS:
 
-### Metoda 1: Pobierz ZIP i Upload (Zalecane dla dużych zmian)
+### Metoda 1: Git Pull (ZALECANE - najszybsze)
+
+```bash
+# 1. Połącz się z VPS
+ssh root@62.169.26.253
+
+# 2. Przejdź do folderu aplikacji
+cd /var/www/rag-app
+
+# 3. Zatrzymaj aplikację
+pm2 stop all
+
+# 4. Pobierz zmiany z GitHub
+git pull origin main
+
+# 5. Zainstaluj nowe zależności (jeśli były)
+npm install
+
+# 6. Przebuduj frontend (jeśli były zmiany)
+npm run build --workspace=apps/frontend
+
+# 7. Uruchom aplikację
+pm2 restart all
+pm2 save
+
+# 8. Sprawdź logi
+pm2 logs --lines 30
+```
+
+### Metoda 2: Pobierz ZIP i Upload (dla większych zmian)
 
 1. **Pobierz ZIP z Replit**
    - Kliknij trzy kropki (...) obok nazwy projektu w Replit
@@ -1056,6 +1091,142 @@ mv /var/www/rag-app-backup-TIMESTAMP /var/www/rag-app
 # Restart
 pm2 restart all
 ```
+
+---
+
+## 🔄 PEŁNE ODŚWIEŻENIE APLIKACJI (gdy usunąłeś bazę danych)
+
+**Użyj tego TYLKO jeśli:**
+- Usunąłeś bazę danych `klient_rag`
+- Usunąłeś użytkownika `klientsql` z PostgreSQL
+- Aplikacja nie może się połączyć z bazą
+
+### Krok 1: Zatrzymaj aplikację
+
+```bash
+ssh root@62.169.26.253
+cd /var/www/rag-app
+pm2 stop all
+```
+
+### Krok 2: Utwórz bazę danych i użytkownika ponownie
+
+```bash
+# Połącz się z PostgreSQL jako postgres
+sudo -u postgres psql
+
+# W konsoli PostgreSQL:
+CREATE DATABASE klient_rag;
+CREATE USER klientsql WITH ENCRYPTED PASSWORD 'glutamina22';
+GRANT ALL PRIVILEGES ON DATABASE klient_rag TO klientsql;
+
+# Podłącz się do bazy
+\c klient_rag
+
+# Daj uprawnienia
+GRANT ALL ON SCHEMA public TO klientsql;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO klientsql;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO klientsql;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO klientsql;
+
+# Wyjdź
+\q
+```
+
+### Krok 3: Uruchom migrations (stwórz tabele)
+
+```bash
+cd /var/www/rag-app
+psql -U klientsql -d klient_rag -h localhost -f apps/database/setup.sql
+```
+
+**Podaj hasło:** `glutamina22`
+
+**Powinieneś zobaczyć:**
+```
+==================================
+RAG Application Database Setup
+==================================
+
+✓ Extensions enabled
+
+Creating tables...
+  ✓ users
+  ✓ chat_sessions
+  ✓ chat_messages
+  ✓ documents
+  ✓ document_chunks
+  ✓ chat_message_sources
+  ✓ user_sessions
+  ✓ usage_stats
+
+Creating views...
+  ✓ user_recent_chats
+  ✓ document_stats
+  ✓ user_activity_summary
+
+Creating functions and triggers...
+  ✓ Functions and triggers created
+
+==================================
+✅ Database setup completed!
+==================================
+```
+
+### Krok 4: Utwórz admin usera
+
+```bash
+psql -U klientsql -d klient_rag -h localhost -f apps/database/seeds/001_create_admin_user.sql
+```
+
+**Podaj hasło:** `glutamina22`
+
+**Powinieneś zobaczyć:**
+```
+✅ Admin user created successfully
+   Email: admin@example.com
+   Password: admin123
+   ⚠️  SECURITY: CHANGE THIS PASSWORD AFTER FIRST LOGIN!
+```
+
+### Krok 5: Zrestartuj aplikację
+
+```bash
+pm2 restart all
+pm2 save
+pm2 logs --lines 30
+```
+
+### Krok 6: Testuj login
+
+```bash
+# Test API
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"admin123"}'
+```
+
+**Powinieneś zobaczyć:**
+```json
+{
+  "success": true,
+  "user": {
+    "id": "...",
+    "username": "admin",
+    "email": "admin@example.com"
+  },
+  "token": "..."
+}
+```
+
+### Krok 7: Otwórz aplikację w przeglądarce
+
+1. Idź na `http://62.169.26.253` (lub swoją domenę)
+2. Zaloguj się:
+   - Email: `admin@example.com`
+   - Hasło: `admin123`
+
+**✅ Gotowe!** Aplikacja działa.
 
 ---
 

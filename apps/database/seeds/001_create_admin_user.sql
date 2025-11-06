@@ -19,7 +19,7 @@ BEGIN
       'admin',
       'admin@example.com',
       -- Password: admin123 (bcrypt hash with salt rounds=10)
-      '$2b$10$K7YqL.J5BqzB5BqzB5BqzeGNvVXZ5qZ7qZ5qZ5qZ5qZ5qZ5qZ5qZO'
+      '$2b$10$ldudqfRIeRsVffVaTuhGzO55vnLmoHnjR1HpSDqzftBYsMe6HlBPi'
     );
     
     RAISE NOTICE '✅ Admin user created successfully';

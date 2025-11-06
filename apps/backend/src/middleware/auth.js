@@ -25,7 +25,7 @@ export async function authenticateToken(req, res, next) {
         u.username, u.email
        FROM user_sessions us
        JOIN users u ON us.user_id = u.id
-       WHERE us.session_token = $1`,
+       WHERE us.token_hash = $1`,
       [token]
     );
 
@@ -42,7 +42,7 @@ export async function authenticateToken(req, res, next) {
     if (new Date(session.expires_at) < new Date()) {
       // Delete expired session
       await pool.query(
-        'DELETE FROM user_sessions WHERE session_token = $1',
+        'DELETE FROM user_sessions WHERE token_hash = $1',
         [token]
       );
 
@@ -92,7 +92,7 @@ export async function optionalAuth(req, res, next) {
         u.username, u.email
        FROM user_sessions us
        JOIN users u ON us.user_id = u.id
-       WHERE us.session_token = $1
+       WHERE us.token_hash = $1
          AND us.expires_at > NOW()`,
       [token]
     );

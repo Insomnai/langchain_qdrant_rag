@@ -55,7 +55,7 @@ export async function login(req, res) {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     await pool.query(
-      `INSERT INTO user_sessions (user_id, session_token, expires_at)
+      `INSERT INTO user_sessions (user_id, token_hash, expires_at)
        VALUES ($1, $2, $3)`,
       [user.id, sessionToken, expiresAt]
     );
@@ -121,7 +121,7 @@ export async function logout(req, res) {
     if (token) {
       const pool = getPool();
       await pool.query(
-        'DELETE FROM user_sessions WHERE session_token = $1',
+        'DELETE FROM user_sessions WHERE token_hash = $1',
         [token]
       );
     }
