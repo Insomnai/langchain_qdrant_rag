@@ -10,6 +10,16 @@ Full-stack aplikacja RAG (Retrieval-Augmented Generation) zbudowana jako monorep
 
 ## Ostatnie Zmiany
 
+**6 listopada 2025 (wieczór cz.2)** - NAPRAWA KRYTYCZNYCH BUGÓW UI
+- ✅ **Fixed file upload button**: Zmieniono z `asChild` na prawidłowe `onClick` (FileManagement.tsx)
+- ✅ **Fixed chat message duplication**: Uproszczono logikę wysyłania wiadomości (ChatView.tsx)
+  - Usunięto duplikowanie user messages
+  - Naprawiono optimistic UI updates
+  - Kod teraz dodaje user message → czeka na response → dodaje assistant message
+- ✅ **Created Replit PostgreSQL database**: Wszystkie migrations uruchomione lokalnie
+- ✅ **Testy backend endpoints**: Login, sessions, database connectivity - wszystko działa
+- ⚠️ **RAG funkcje**: Wymagają Qdrant + OPENAI_API_KEY (dostępne tylko na VPS)
+
 **6 listopada 2025 (wieczór)** - NAPRAWA SCHEMATU BAZY DANYCH
 - ✅ **Fixed database schema mismatch**: Naprawiono tabelę `chat_message_sources`
   - Zmieniono kolumny: `document_chunk_id` → `source_content`, `source_metadata`

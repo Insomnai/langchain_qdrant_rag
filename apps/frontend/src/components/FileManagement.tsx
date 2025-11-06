@@ -132,14 +132,15 @@ const FileManagement = ({ files, onFilesChange }: FileManagementProps) => {
               Lub kliknij przycisk poniżej, aby wybrać pliki
             </p>
           </div>
-          <label htmlFor="file-upload">
-            <Button type="button" className="gap-2" asChild disabled={isUploading}>
-              <span>
-                <Upload className="w-4 h-4" />
-                {isUploading ? "Przesyłanie..." : "Wybierz pliki z dysku"}
-              </span>
-            </Button>
-          </label>
+          <Button 
+            type="button" 
+            className="gap-2" 
+            disabled={isUploading}
+            onClick={() => document.getElementById('file-upload')?.click()}
+          >
+            <Upload className="w-4 h-4" />
+            {isUploading ? "Przesyłanie..." : "Wybierz pliki z dysku"}
+          </Button>
           <input
             id="file-upload"
             type="file"

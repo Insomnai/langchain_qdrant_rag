@@ -177,45 +177,37 @@ const ChatView = ({ availableFiles }: ChatViewProps) => {
     setInput("");
     setIsLoading(true);
 
-    // Optimistic UI update
-    const tempUserMessage: Message = {
-      id: `temp-${Date.now()}`,
+    // Optimistic UI update - add user message immediately
+    const userMessageId = `user-${Date.now()}`;
+    const newUserMessage: Message = {
+      id: userMessageId,
       role: "user",
       content: questionText,
       chatId: activeChat,
     };
-    setMessages((prev) => [...prev, tempUserMessage]);
+    setMessages((prev) => [...prev, newUserMessage]);
 
     try {
       const response = await api.chat.sendMessage(activeChat, questionText, 3);
       
       if (response.success && response.message) {
-        // Remove temp message and add real messages
-        setMessages((prev) => {
-          const filtered = prev.filter(m => m.id !== tempUserMessage.id);
-          return [
-            ...filtered,
-            {
-              id: `user-${Date.now()}`,
-              role: "user",
-              content: questionText,
-              chatId: activeChat,
-            },
-            {
-              id: response.message.id,
-              role: "assistant",
-              content: response.message.content,
-              sources: response.message.sources || [],
-              chatId: activeChat,
-            },
-          ];
-        });
+        // Add assistant response
+        const assistantMessage: Message = {
+          id: response.message.id,
+          role: "assistant",
+          content: response.message.content,
+          sources: response.message.sources || [],
+          chatId: activeChat,
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } else {
+        throw new Error("Błąd odpowiedzi z serwera");
       }
     } catch (error: any) {
       console.error('Error sending message:', error);
       
-      // Remove temp message
-      setMessages((prev) => prev.filter(m => m.id !== tempUserMessage.id));
+      // Remove user message on error
+      setMessages((prev) => prev.filter(m => m.id !== userMessageId));
       
       toast({
         title: "Błąd",
